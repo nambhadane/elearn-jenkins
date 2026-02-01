@@ -1,7 +1,7 @@
 
 package com.elearnhub.teacher_service.config;
 
-import com.elearnhub.teacher_service.util.JwtFilter;
+//import com.elearnhub.teacher_service.util.JwtFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +20,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.elearnhub.teacher_service.util.JwtFilter;
+
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Arrays;
 
@@ -54,7 +57,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:8081"));
+//        configuration.setAllowedOrigins(Arrays.asList("http://localhost:8081"));
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:8081",
+                "http://127.0.0.1:8081"
+        ));
+
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*")); // ✅ This includes Authorization header
         configuration.setAllowCredentials(true);

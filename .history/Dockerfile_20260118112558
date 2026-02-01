@@ -1,0 +1,58 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# --- Install dependencies ---
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    gnupg \
+    ca-certificates \
+    software-properties-common \
+    apt-transport-https \
+    python3 \
+    python3-pip \
+    supervisor \
+    mysql-server
+
+# --- Install Java 21 ---
+RUN apt-get update && apt-get install -y openjdk-21-jdk
+
+# --- Install Maven ---
+RUN apt-get update && apt-get install -y maven
+
+# --- Install Node.js 18 ---
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs
+
+# --- Create app directory ---
+WORKDIR /app
+
+# --- Copy source code ---
+COPY Backend/teacher-service /app/Backend/teacher-service
+COPY frontend/eduflow-hub /app/frontend/eduflow-hub
+
+# --- Build frontend ---
+RUN cd /app/frontend/eduflow-hub && npm install
+
+# --- Build backend ---
+RUN mvn -f /app/Backend/teacher-service/pom.xml clean package -DskipTests
+
+# --- Copy backend JAR to common location ---
+RUN cp /app/Backend/teacher-service/target/*.jar /app/app.jar
+
+# --- MySQL Setup Directory ---
+RUN mkdir -p /var/lib/mysql /var/run/mysqld \
+    && chown -R mysql:mysql /var/lib/mysql /var/run/mysqld
+
+# --- Init MySQL database on build ---
+RUN mysqld --initialize-insecure --user=mysql --datadir=/var/lib/mysql
+
+# --- Add supervisord config ---
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# --- expose ports ---
+EXPOSE 8081 8082 3306
+
+# --- startup ---
+CMD ["/usr/bin/supervisord", "-n"]

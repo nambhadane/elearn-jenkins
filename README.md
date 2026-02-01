@@ -4,6 +4,17 @@ A complete digital learning platform providing **live classes, assignments, quiz
 
 ---
 
+project-root/
+ ├─ Backend/
+ │   └─ teacher-service/
+ ├─ frontend/
+ │   └─ eduflow-hub/
+ ├─ Dockerfile
+ ├─ supervisord.conf
+ ├─ docker-compose.yml
+ └─ README.md
+
+
 ## 🚀 Project Overview
 
 **E-Learning Hub (ElearnHub)** is a full-stack web-based Learning Management System (LMS) developed to modernize online education.  

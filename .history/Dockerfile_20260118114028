@@ -1,0 +1,15 @@
+ => [12/14] RUN mkdir -p /var/lib/mysql /var/run/mysqld     && chown -R mysql:mysql /var/lib/mysql /var/run/mysqld                 5.4s
+ => ERROR [13/14] RUN mysqld --initialize-insecure --user=mysql --datadir=/var/lib/mysql                                           1.5s
+------
+ > [13/14] RUN mysqld --initialize-insecure --user=mysql --datadir=/var/lib/mysql:
+------
+Dockerfile:49
+--------------------
+  47 |     
+  48 |     # --- Init MySQL database on build ---
+  49 | >>> RUN mysqld --initialize-insecure --user=mysql --datadir=/var/lib/mysql
+  50 |
+  51 |     # --- Add supervisord config ---
+--------------------
+ERROR: failed to build: failed to solve: process "/bin/sh -c mysqld --initialize-insecure --user=mysql --datadir=/var/lib/mysql" did not complete successfully: exit code: 1
+PS D:\ELearnHub\E-LearnHub> 

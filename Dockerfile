@@ -1,6 +1,10 @@
 FROM ubuntu:22.04
 
-# --- Basic dependencies ---
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ===============================
+# Basic dependencies
+# ===============================
 RUN apt-get update && apt-get install -y \
     curl \
     git \
@@ -10,41 +14,74 @@ RUN apt-get update && apt-get install -y \
     software-properties-common \
     python3 \
     python3-pip \
-    supervisor
+    supervisor \
+    mysql-server \
+    && rm -rf /var/lib/apt/lists/*
 
-# --- Install Java (OpenJDK 21) ---
+# ===============================
+# Java (OpenJDK 21)
+# ===============================
 RUN apt-get update && apt-get install -y openjdk-21-jdk
 
-# --- Install Maven ---
+# ===============================
+# Maven
+# ===============================
 RUN apt-get update && apt-get install -y maven
 
-# --- Install Node.js 18 ---
+# ===============================
+# Node.js 18
+# ===============================
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs
 
-# --- App workspace ---
+# ===============================
+# App workspace
+# ===============================
 WORKDIR /app
 
-# --- Copy backend source ---
+# ===============================
+# Copy backend source
+# ===============================
 COPY Backend/teacher-service /app/Backend/teacher-service
 
-# --- Copy frontend source ---
+# ===============================
+# Copy frontend source
+# ===============================
 COPY frontend/eduflow-hub /app/frontend/eduflow-hub
 
-# --- Install frontend dependencies (vite) ---
+# ===============================
+# Install frontend dependencies
+# ===============================
 RUN cd /app/frontend/eduflow-hub && npm install
 
-# --- Build backend jar ---
+# ===============================
+# Build backend jar
+# ===============================
 RUN mvn -f /app/Backend/teacher-service/pom.xml clean package -DskipTests
 
-# --- Copy jar to universal location ---
+# ===============================
+# Copy jar to common location
+# ===============================
 RUN cp /app/Backend/teacher-service/target/*.jar /app/app.jar
 
-# --- Expose ports for frontend + backend ---
-EXPOSE 8081 8082
+# ===============================
+# MySQL initial setup
+# ===============================
+RUN service mysql start && \
+    mysql -u root -e "CREATE DATABASE IF NOT EXISTS elearn_teacher;" && \
+    mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'Nikit@16burgute'; FLUSH PRIVILEGES;"
 
-# --- Add supervisor config ---
+# ===============================
+# Expose ports
+# ===============================
+EXPOSE 8081 8082 3306
+
+# ===============================
+# Supervisor config
+# ===============================
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# --- Start supervisor (runs both services) ---
+# ===============================
+# Start all services
+# ===============================
 CMD ["/usr/bin/supervisord", "-n"]
