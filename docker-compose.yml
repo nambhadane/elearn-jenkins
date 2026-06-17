@@ -1,0 +1,54 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: elearn-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Namrata@1805}
+      MYSQL_DATABASE: elearn_teacher
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-Namrata@1805}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./Backend/teacher-service
+      dockerfile: Dockerfile
+    container_name: elearn-backend
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/elearn_teacher?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Namrata@1805}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8081,http://127.0.0.1:8081}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8081}
+    ports:
+      - "8082:8082"
+    volumes:
+      - uploads_data:/app/uploads/submissions
+
+  frontend:
+    build:
+      context: ./frontend/eduflow-hub
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8082}
+    container_name: elearn-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "8081:80"
+
+volumes:
+  mysql_data:
+  uploads_data:

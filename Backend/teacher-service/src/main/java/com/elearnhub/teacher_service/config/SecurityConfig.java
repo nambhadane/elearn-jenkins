@@ -25,10 +25,17 @@ import com.elearnhub.teacher_service.util.JwtFilter;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Arrays;
+import java.util.List;
+import java.util.ArrayList;
+
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    @Value("${app.cors.allowed-origins:http://localhost:8081,http://127.0.0.1:8081}")
+    private String allowedOrigins;
 
     @Autowired
     private UserDetailsService userDetailsService;
@@ -57,11 +64,9 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-//        configuration.setAllowedOrigins(Arrays.asList("http://localhost:8081"));
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:8081",
-                "http://127.0.0.1:8081"
-        ));
+        // Support multiple origins via comma-separated env variable
+        List<String> origins = new ArrayList<>(Arrays.asList(allowedOrigins.split(",")));
+        configuration.setAllowedOrigins(origins);
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*")); // ✅ This includes Authorization header
