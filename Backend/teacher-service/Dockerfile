@@ -1,20 +1,19 @@
 # ================================
 # Stage 1: Build the JAR
 # ================================
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM maven:3.9.9-eclipse-temurin-21-alpine AS builder
 
 WORKDIR /app
 
-# Copy Maven wrapper and pom.xml first (for layer caching)
-COPY .mvn/ .mvn/
-COPY mvnw pom.xml ./
+# Copy pom.xml first (for dependency caching)
+COPY pom.xml ./
 
 # Download dependencies (cached layer if pom.xml hasn't changed)
-RUN ./mvnw dependency:go-offline -B
+RUN mvn dependency:go-offline -B
 
 # Copy source and build
 COPY src ./src
-RUN ./mvnw clean package -DskipTests -B
+RUN mvn clean package -DskipTests -B
 
 # ================================
 # Stage 2: Run the JAR
