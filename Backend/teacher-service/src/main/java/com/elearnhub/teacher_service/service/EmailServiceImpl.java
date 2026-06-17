@@ -383,14 +383,10 @@ public class EmailServiceImpl implements EmailService {
     
     // Utility Methods
     @Override
-    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public boolean isEmailServiceEnabled() {
-        try {
-            Optional<SystemSettings> settingsOpt = systemSettingsRepository.findCurrentSettings();
-            return settingsOpt.map(SystemSettings::getEmailNotificationsEnabled).orElse(true);
-        } catch (Exception e) {
-            return true; // Default to enabled if settings can't be retrieved
-        }
+        // Always return true - email is configured via application properties
+        // Avoid DB call here to prevent transaction contamination
+        return true;
     }
     
     @Override
@@ -425,34 +421,21 @@ public class EmailServiceImpl implements EmailService {
             
             mailSender.send(message);
             System.out.println("✅ Email sent successfully to: " + to);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
+            // Catch ALL exceptions including MailException (unchecked) from JavaMailSender
+            // This must never propagate up and poison an outer transaction
             System.err.println("❌ Failed to send email to: " + to + " - " + e.getMessage());
-            // Fallback to console output if email fails
             System.out.println("📧 EMAIL FALLBACK: " + subject);
             System.out.println("To: " + to);
-            System.out.println("Content: " + htmlContent);
-            System.out.println("---");
         }
     }
     
-    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     private String getPlatformName() {
-        try {
-            Optional<SystemSettings> settingsOpt = systemSettingsRepository.findCurrentSettings();
-            return settingsOpt.map(SystemSettings::getPlatformName).orElse("EduFlow Hub");
-        } catch (Exception e) {
-            return "EduFlow Hub";
-        }
+        return "EduFlow Hub";
     }
 
-    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     private String getSupportEmail() {
-        try {
-            Optional<SystemSettings> settingsOpt = systemSettingsRepository.findCurrentSettings();
-            return settingsOpt.map(SystemSettings::getSupportEmail).orElse("support@eduflow.com");
-        } catch (Exception e) {
-            return "support@eduflow.com";
-        }
+        return "support@eduflow.com";
     }
     
     private String getTemplateForType(String templateName, Map<String, String> variables) {
