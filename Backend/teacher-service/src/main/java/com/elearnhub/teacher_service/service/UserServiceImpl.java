@@ -32,6 +32,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     private EmailVerificationService emailVerificationService;
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(noRollbackFor = Exception.class)
     public User createUser(User user) {
         if (userRepository.findByUsername(user.getUsername()).isPresent()) {
             throw new RuntimeException("Username already exists: " + user.getUsername());

@@ -194,11 +194,13 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     }
     
     @Override
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public boolean isEmailVerificationRequired() {
         try {
             Optional<SystemSettings> settingsOpt = systemSettingsRepository.findCurrentSettings();
             return settingsOpt.map(SystemSettings::getRequireEmailVerification).orElse(false);
         } catch (Exception e) {
+            System.err.println("⚠️ Could not read system settings (table may not exist yet): " + e.getMessage());
             return false; // Default to not required if settings can't be retrieved
         }
     }

@@ -383,6 +383,7 @@ public class EmailServiceImpl implements EmailService {
     
     // Utility Methods
     @Override
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public boolean isEmailServiceEnabled() {
         try {
             Optional<SystemSettings> settingsOpt = systemSettingsRepository.findCurrentSettings();
@@ -434,6 +435,7 @@ public class EmailServiceImpl implements EmailService {
         }
     }
     
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     private String getPlatformName() {
         try {
             Optional<SystemSettings> settingsOpt = systemSettingsRepository.findCurrentSettings();
@@ -442,7 +444,8 @@ public class EmailServiceImpl implements EmailService {
             return "EduFlow Hub";
         }
     }
-    
+
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     private String getSupportEmail() {
         try {
             Optional<SystemSettings> settingsOpt = systemSettingsRepository.findCurrentSettings();
