@@ -1,0 +1,93 @@
+# ================================================
+# Backend Deployment
+# Runs the Spring Boot (E-LearnHub teacher-service) pod
+#
+# BEFORE APPLYING:
+#   1. Build: docker build -t namrata1805/elearnhub-backend:latest .
+#   2. Push:  docker push namrata1805/elearnhub-backend:latest
+# ================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  namespace: default
+  labels:
+    app: elearnhub
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elearnhub
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: elearnhub
+        tier: backend
+    spec:
+      containers:
+        - name: backend
+          image: namrata1805/elearnhub-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8082
+          env:
+            # ---- Database connection (points to mysql-service inside the cluster) ----
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql-service:3306/elearn_teacher?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: mysql-root-password
+            # ---- CORS & App URL (update with your frontend NodePort URL) ----
+            - name: CORS_ALLOWED_ORIGINS
+              value: "http://localhost:30081,http://127.0.0.1:30081"
+            - name: APP_BASE_URL
+              value: "http://localhost:30081"
+          volumeMounts:
+            - name: uploads-storage
+              mountPath: /app/uploads
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 90
+            periodSeconds: 30
+      volumes:
+        - name: uploads-storage
+          emptyDir: {}
+---
+# ================================================
+# Backend Service — NodePort
+# Exposes backend at http://<node-ip>:30082
+# ================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: default
+  labels:
+    app: elearnhub
+    tier: backend
+spec:
+  selector:
+    app: elearnhub
+    tier: backend
+  ports:
+    - protocol: TCP
+      port: 8082
+      targetPort: 8082
+      nodePort: 30082
+  type: NodePort
+

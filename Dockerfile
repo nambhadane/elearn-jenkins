@@ -1,87 +1,48 @@
-FROM ubuntu:22.04
+# ================================================
+# E-LearnHub Backend — Multi-Stage Docker Build
+# ================================================
+# Stage 1: Build the Spring Boot JAR
+# ================================================
+FROM maven:3.9.9-eclipse-temurin-17-alpine AS builder
 
-ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /build
 
-# ===============================
-# Basic dependencies
-# ===============================
-RUN apt-get update && apt-get install -y \
-    curl \
-    git \
-    gnupg \
-    ca-certificates \
-    apt-transport-https \
-    software-properties-common \
-    python3 \
-    python3-pip \
-    supervisor \
-    mysql-server \
-    && rm -rf /var/lib/apt/lists/*
+# Copy pom.xml first to leverage Docker layer caching for dependencies
+COPY Backend/teacher-service/pom.xml ./
 
-# ===============================
-# Java (OpenJDK 21)
-# ===============================
-RUN apt-get update && apt-get install -y openjdk-21-jdk
+# Download all dependencies (cached unless pom.xml changes)
+RUN mvn dependency:go-offline -B
 
-# ===============================
-# Maven
-# ===============================
-RUN apt-get update && apt-get install -y maven
+# Copy source code and build the JAR (skip tests for faster builds)
+COPY Backend/teacher-service/src ./src
+RUN mvn clean package -DskipTests -B
 
-# ===============================
-# Node.js 18
-# ===============================
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs
+# ================================================
+# Stage 2: Run the application with a slim JRE
+# ================================================
+FROM eclipse-temurin:17-jre-alpine
 
-# ===============================
-# App workspace
-# ===============================
+# Add a non-root user for security best practice
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
 WORKDIR /app
 
-# ===============================
-# Copy backend source
-# ===============================
-COPY Backend/teacher-service /app/Backend/teacher-service
+# Create directories for file uploads
+RUN mkdir -p /app/uploads/submissions /app/uploads/profiles /app/uploads/lessons \
+    && chown -R appuser:appgroup /app
 
-# ===============================
-# Copy frontend source
-# ===============================
-COPY frontend/eduflow-hub /app/frontend/eduflow-hub
+# Copy only the built JAR from the builder stage
+COPY --from=builder /build/target/*.jar app.jar
 
-# ===============================
-# Install frontend dependencies
-# ===============================
-RUN cd /app/frontend/eduflow-hub && npm install
+# Switch to non-root user
+USER appuser
 
-# ===============================
-# Build backend jar
-# ===============================
-RUN mvn -f /app/Backend/teacher-service/pom.xml clean package -DskipTests
+# Expose the backend API port
+EXPOSE 8082
 
-# ===============================
-# Copy jar to common location
-# ===============================
-RUN cp /app/Backend/teacher-service/target/*.jar /app/app.jar
+# Health check — ensures Kubernetes knows when the container is ready
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD wget -qO- http://localhost:8082/actuator/health || exit 1
 
-# ===============================
-# MySQL initial setup
-# ===============================
-RUN service mysql start && \
-    mysql -u root -e "CREATE DATABASE IF NOT EXISTS elearn_teacher;" && \
-    mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'Nikit@16burgute'; FLUSH PRIVILEGES;"
-
-# ===============================
-# Expose ports
-# ===============================
-EXPOSE 8081 8082 3306
-
-# ===============================
-# Supervisor config
-# ===============================
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# ===============================
-# Start all services
-# ===============================
-CMD ["/usr/bin/supervisord", "-n"]
+# Run the Spring Boot application
+ENTRYPOINT ["java", "-jar", "app.jar"]

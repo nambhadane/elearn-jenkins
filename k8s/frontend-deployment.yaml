@@ -1,0 +1,72 @@
+# ================================================
+# Frontend Deployment
+# Runs the React/Nginx (E-LearnHub UI) pod
+#
+# BEFORE APPLYING:
+#   1. Build: docker build --build-arg VITE_API_BASE_URL=http://<node-ip>:30082 \
+#             -t namrata1805/elearnhub-frontend:latest \
+#             frontend/eduflow-hub
+#   2. Push:  docker push namrata1805/elearnhub-frontend:latest
+# ================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  namespace: default
+  labels:
+    app: elearnhub
+    tier: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elearnhub
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: elearnhub
+        tier: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: namrata1805/elearnhub-frontend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 20
+            periodSeconds: 30
+---
+# ================================================
+# Frontend Service — NodePort
+# Exposes the UI at http://<node-ip>:30081
+# ================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: default
+  labels:
+    app: elearnhub
+    tier: frontend
+spec:
+  selector:
+    app: elearnhub
+    tier: frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 30081
+  type: NodePort
+
