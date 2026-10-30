@@ -2,49 +2,145 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "namrata1805/elearn-merge" // lowercase is safer
-        IMAGE_TAG = "2.0"
+        DOCKERHUB_CREDENTIALS_ID = 'dockerhub-credentials'
+        DOCKERHUB_USERNAME       = 'namrata1805'
+        BACKEND_IMAGE            = "${DOCKERHUB_USERNAME}/elearnhub-backend"
+        FRONTEND_IMAGE           = "${DOCKERHUB_USERNAME}/elearnhub-frontend"
+        BUILD_TAG                = "${BUILD_NUMBER}"
+    }
+
+    options {
+        timestamps()
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
     }
 
     stages {
 
-        stage('Try') {
+        // ==========================================
+        // Stage 1: Automated Source Code Integration
+        // ==========================================
+        stage('Checkout Source Code') {
             steps {
-                echo "hello i have startyed"
+                echo '=== Stage 1: Pulling latest code from GitHub ==='
+                checkout scmGit(
+                    branches: [[name: '*/main']],
+                    extensions: [],
+                    userRemoteConfigs: [[url: 'https://github.com/nambhadane/elearn-jenkins.git']]
+                )
             }
         }
 
-        stage('Checkout Code') {
+        // ==========================================
+        // Stage 2: Automated Testing (Backend Unit Tests)
+        // ==========================================
+        stage('Automated Tests') {
             steps {
-                git branch: 'main', url: 'https://github.com/nambhadane/ELearnHub.git'
+                echo '=== Stage 2: Running Unit & Integration Tests ==='
+                dir('Backend/teacher-service') {
+                    // Running tests via maven wrapper or maven
+                    bat 'mvn test'
+                }
             }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    echo "Building Docker image..."
-                    def customImage = docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
-                    env.IMAGE_ID = customImage.id
+            post {
+                always {
+                    // Record and archive test results in Jenkins UI
+                    junit testResults: 'Backend/teacher-service/target/surefire-reports/*.xml', allowEmptyResults: true
                 }
             }
         }
 
-        stage('Push Docker Image') {
+        // ==========================================
+        // Stage 3: Application Build & Artifact Packaging
+        // ==========================================
+        stage('Build & Package') {
             steps {
+                echo '=== Stage 3: Compiling Application & Generating JAR ==='
+                dir('Backend/teacher-service') {
+                    bat 'mvn clean package -DskipTests'
+                }
+            }
+        }
+
+        // ==========================================
+        // Stage 4: Docker Container Image Build
+        // ==========================================
+        stage('Build Docker Images') {
+            steps {
+                echo '=== Stage 4: Building Multi-Stage Docker Images ==='
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
-                        docker.image("${IMAGE_NAME}:${IMAGE_TAG}").push()
+                    // Build Backend Image (tagged with both build number and latest)
+                    bat "docker build -t ${BACKEND_IMAGE}:${BUILD_TAG} -t ${BACKEND_IMAGE}:latest ."
+                    
+                    // Build Frontend Image with production API target
+                    bat "docker build --build-arg VITE_API_BASE_URL=http://localhost:8082 -t ${FRONTEND_IMAGE}:${BUILD_TAG} -t ${FRONTEND_IMAGE}:latest frontend/eduflow-hub"
+                }
+            }
+        }
+
+        // ==========================================
+        // Stage 5: Push Images to Docker Hub Registry
+        // ==========================================
+        stage('Push Images to Docker Hub') {
+            steps {
+                echo '=== Stage 5: Publishing Images to Docker Hub ==='
+                script {
+                    withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS_ID}", 
+                                                      usernameVariable: 'DH_USER', 
+                                                      passwordVariable: 'DH_PASS')]) {
+                        bat 'echo %DH_PASS% | docker login -u %DH_USER% --password-stdin'
+                        
+                        bat "docker push ${BACKEND_IMAGE}:${BUILD_TAG}"
+                        bat "docker push ${BACKEND_IMAGE}:latest"
+                        
+                        bat "docker push ${FRONTEND_IMAGE}:${BUILD_TAG}"
+                        bat "docker push ${FRONTEND_IMAGE}:latest"
                     }
                 }
             }
         }
+
+        // ==========================================
+        // Stage 6: Continuous Deployment to Kubernetes
+        // ==========================================
+        stage('Deploy to Kubernetes') {
+            steps {
+                echo '=== Stage 6: Deploying Application to Kubernetes Cluster ==='
+                script {
+                    // Apply Kubernetes manifests in defined dependency order
+                    bat 'kubectl apply -f k8s/mysql-secret.yaml'
+                    bat 'kubectl apply -f k8s/mysql-pvc.yaml'
+                    bat 'kubectl apply -f k8s/mysql-deployment.yaml'
+                    bat 'kubectl apply -f k8s/backend-deployment.yaml'
+                    bat 'kubectl apply -f k8s/frontend-deployment.yaml'
+                    
+                    // Rolling restart ensures pods pick up newly pushed image version
+                    bat 'kubectl rollout restart deployment backend-deployment'
+                    bat 'kubectl rollout restart deployment frontend-deployment'
+                    
+                    // Verify rollout status
+                    bat 'kubectl rollout status deployment/backend-deployment --timeout=120s'
+                    bat 'kubectl rollout status deployment/frontend-deployment --timeout=120s'
+                }
+            }
+        }
     }
 
+    // ==========================================
+    // Post-Build Pipeline Notifications & Housekeeping
+    // ==========================================
     post {
-        success { echo "Docker image successfully built and pushed 🚀" }
-        failure { echo "Pipeline failed ❌" }
+        always {
+            echo '=== Pipeline Execution Completed ==='
+            // Show deployed pods and services status in console output
+            bat 'kubectl get pods'
+            bat 'kubectl get services'
+        }
+        success {
+            echo "SUCCESS: E-LearnHub CI/CD Pipeline Build #${BUILD_NUMBER} completed and deployed successfully! 🚀"
+        }
+        failure {
+            echo "FAILURE: E-LearnHub CI/CD Pipeline Build #${BUILD_NUMBER} failed. Check stage logs for details. ❌"
+        }
     }
 }
-
-
