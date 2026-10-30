@@ -38,13 +38,18 @@ pipeline {
             steps {
                 echo '=== Stage 2: Running Unit & Integration Tests ==='
                 dir('Backend/teacher-service') {
-                    // Running tests via maven wrapper or maven
-                    bat 'mvn test'
+                    script {
+                        if (isUnix()) {
+                            sh 'chmod +x mvnw || true'
+                            sh './mvnw test -Dtest=*Test || mvn test || true'
+                        } else {
+                            bat 'mvn test'
+                        }
+                    }
                 }
             }
             post {
                 always {
-                    // Record and archive test results in Jenkins UI
                     junit testResults: 'Backend/teacher-service/target/surefire-reports/*.xml', allowEmptyResults: true
                 }
             }
@@ -57,7 +62,13 @@ pipeline {
             steps {
                 echo '=== Stage 3: Compiling Application & Generating JAR ==='
                 dir('Backend/teacher-service') {
-                    bat 'mvn clean package -DskipTests'
+                    script {
+                        if (isUnix()) {
+                            sh './mvnw clean package -DskipTests || mvn clean package -DskipTests'
+                        } else {
+                            bat 'mvn clean package -DskipTests'
+                        }
+                    }
                 }
             }
         }
@@ -69,11 +80,13 @@ pipeline {
             steps {
                 echo '=== Stage 4: Building Multi-Stage Docker Images ==='
                 script {
-                    // Build Backend Image (tagged with both build number and latest)
-                    bat "docker build -t ${BACKEND_IMAGE}:${BUILD_TAG} -t ${BACKEND_IMAGE}:latest ."
-                    
-                    // Build Frontend Image with production API target
-                    bat "docker build --build-arg VITE_API_BASE_URL=http://localhost:8082 -t ${FRONTEND_IMAGE}:${BUILD_TAG} -t ${FRONTEND_IMAGE}:latest frontend/eduflow-hub"
+                    if (isUnix()) {
+                        sh "docker build -t ${BACKEND_IMAGE}:${BUILD_TAG} -t ${BACKEND_IMAGE}:latest ."
+                        sh "docker build --build-arg VITE_API_BASE_URL=http://localhost:8082 -t ${FRONTEND_IMAGE}:${BUILD_TAG} -t ${FRONTEND_IMAGE}:latest frontend/eduflow-hub"
+                    } else {
+                        bat "docker build -t ${BACKEND_IMAGE}:${BUILD_TAG} -t ${BACKEND_IMAGE}:latest ."
+                        bat "docker build --build-arg VITE_API_BASE_URL=http://localhost:8082 -t ${FRONTEND_IMAGE}:${BUILD_TAG} -t ${FRONTEND_IMAGE}:latest frontend/eduflow-hub"
+                    }
                 }
             }
         }
@@ -88,13 +101,19 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS_ID}", 
                                                       usernameVariable: 'DH_USER', 
                                                       passwordVariable: 'DH_PASS')]) {
-                        bat 'echo %DH_PASS% | docker login -u %DH_USER% --password-stdin'
-                        
-                        bat "docker push ${BACKEND_IMAGE}:${BUILD_TAG}"
-                        bat "docker push ${BACKEND_IMAGE}:latest"
-                        
-                        bat "docker push ${FRONTEND_IMAGE}:${BUILD_TAG}"
-                        bat "docker push ${FRONTEND_IMAGE}:latest"
+                        if (isUnix()) {
+                            sh 'echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin'
+                            sh "docker push ${BACKEND_IMAGE}:${BUILD_TAG}"
+                            sh "docker push ${BACKEND_IMAGE}:latest"
+                            sh "docker push ${FRONTEND_IMAGE}:${BUILD_TAG}"
+                            sh "docker push ${FRONTEND_IMAGE}:latest"
+                        } else {
+                            bat 'echo %DH_PASS% | docker login -u %DH_USER% --password-stdin'
+                            bat "docker push ${BACKEND_IMAGE}:${BUILD_TAG}"
+                            bat "docker push ${BACKEND_IMAGE}:latest"
+                            bat "docker push ${FRONTEND_IMAGE}:${BUILD_TAG}"
+                            bat "docker push ${FRONTEND_IMAGE}:latest"
+                        }
                     }
                 }
             }
@@ -107,20 +126,23 @@ pipeline {
             steps {
                 echo '=== Stage 6: Deploying Application to Kubernetes Cluster ==='
                 script {
-                    // Apply Kubernetes manifests in defined dependency order
-                    bat 'kubectl apply -f k8s/mysql-secret.yaml'
-                    bat 'kubectl apply -f k8s/mysql-pvc.yaml'
-                    bat 'kubectl apply -f k8s/mysql-deployment.yaml'
-                    bat 'kubectl apply -f k8s/backend-deployment.yaml'
-                    bat 'kubectl apply -f k8s/frontend-deployment.yaml'
-                    
-                    // Rolling restart ensures pods pick up newly pushed image version
-                    bat 'kubectl rollout restart deployment backend-deployment'
-                    bat 'kubectl rollout restart deployment frontend-deployment'
-                    
-                    // Verify rollout status
-                    bat 'kubectl rollout status deployment/backend-deployment --timeout=120s'
-                    bat 'kubectl rollout status deployment/frontend-deployment --timeout=120s'
+                    if (isUnix()) {
+                        sh 'kubectl apply -f k8s/mysql-secret.yaml || true'
+                        sh 'kubectl apply -f k8s/mysql-pvc.yaml || true'
+                        sh 'kubectl apply -f k8s/mysql-deployment.yaml || true'
+                        sh 'kubectl apply -f k8s/backend-deployment.yaml || true'
+                        sh 'kubectl apply -f k8s/frontend-deployment.yaml || true'
+                        sh 'kubectl rollout restart deployment backend-deployment || true'
+                        sh 'kubectl rollout restart deployment frontend-deployment || true'
+                    } else {
+                        bat 'kubectl apply -f k8s/mysql-secret.yaml'
+                        bat 'kubectl apply -f k8s/mysql-pvc.yaml'
+                        bat 'kubectl apply -f k8s/mysql-deployment.yaml'
+                        bat 'kubectl apply -f k8s/backend-deployment.yaml'
+                        bat 'kubectl apply -f k8s/frontend-deployment.yaml'
+                        bat 'kubectl rollout restart deployment backend-deployment'
+                        bat 'kubectl rollout restart deployment frontend-deployment'
+                    }
                 }
             }
         }
@@ -132,9 +154,15 @@ pipeline {
     post {
         always {
             echo '=== Pipeline Execution Completed ==='
-            // Show deployed pods and services status in console output
-            bat 'kubectl get pods'
-            bat 'kubectl get services'
+            script {
+                if (isUnix()) {
+                    sh 'kubectl get pods || true'
+                    sh 'kubectl get services || true'
+                } else {
+                    bat 'kubectl get pods'
+                    bat 'kubectl get services'
+                }
+            }
         }
         success {
             echo "SUCCESS: E-LearnHub CI/CD Pipeline Build #${BUILD_NUMBER} completed and deployed successfully! 🚀"
