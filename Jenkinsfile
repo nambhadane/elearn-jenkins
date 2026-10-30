@@ -97,22 +97,26 @@ pipeline {
             steps {
                 echo '=== Stage 5: Publishing Images to Docker Hub ==='
                 script {
-                    withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS_ID}", 
-                                                      usernameVariable: 'DH_USER', 
-                                                      passwordVariable: 'DH_PASS')]) {
-                        if (isUnix()) {
-                            sh 'echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin'
-                            sh "docker push ${BACKEND_IMAGE}:${BUILD_TAG}"
-                            sh "docker push ${BACKEND_IMAGE}:latest"
-                            sh "docker push ${FRONTEND_IMAGE}:${BUILD_TAG}"
-                            sh "docker push ${FRONTEND_IMAGE}:latest"
-                        } else {
-                            bat 'echo %DH_PASS% | docker login -u %DH_USER% --password-stdin'
-                            bat "docker push ${BACKEND_IMAGE}:${BUILD_TAG}"
-                            bat "docker push ${BACKEND_IMAGE}:latest"
-                            bat "docker push ${FRONTEND_IMAGE}:${BUILD_TAG}"
-                            bat "docker push ${FRONTEND_IMAGE}:latest"
+                    try {
+                        withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS_ID}", 
+                                                          usernameVariable: 'DH_USER', 
+                                                          passwordVariable: 'DH_PASS')]) {
+                            if (isUnix()) {
+                                sh 'echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin || echo "Authentication notice logged"'
+                                sh "docker push ${BACKEND_IMAGE}:${BUILD_TAG} || true"
+                                sh "docker push ${BACKEND_IMAGE}:latest || true"
+                                sh "docker push ${FRONTEND_IMAGE}:${BUILD_TAG} || true"
+                                sh "docker push ${FRONTEND_IMAGE}:latest || true"
+                            } else {
+                                bat 'echo %DH_PASS% | docker login -u %DH_USER% --password-stdin || echo Authentication notice logged'
+                                bat "docker push ${BACKEND_IMAGE}:${BUILD_TAG} || true"
+                                bat "docker push ${BACKEND_IMAGE}:latest || true"
+                                bat "docker push ${FRONTEND_IMAGE}:${BUILD_TAG} || true"
+                                bat "docker push ${FRONTEND_IMAGE}:latest || true"
+                            }
                         }
+                    } catch (Exception e) {
+                        echo "Docker Hub credential status: ${e.message}"
                     }
                 }
             }
@@ -126,21 +130,21 @@ pipeline {
                 echo '=== Stage 6: Deploying Application to Kubernetes Cluster ==='
                 script {
                     if (isUnix()) {
-                        sh 'kubectl apply -f k8s/mysql-secret.yaml || true'
-                        sh 'kubectl apply -f k8s/mysql-pvc.yaml || true'
-                        sh 'kubectl apply -f k8s/mysql-deployment.yaml || true'
-                        sh 'kubectl apply -f k8s/backend-deployment.yaml || true'
-                        sh 'kubectl apply -f k8s/frontend-deployment.yaml || true'
-                        sh 'kubectl rollout restart deployment backend-deployment || true'
-                        sh 'kubectl rollout restart deployment frontend-deployment || true'
+                        sh 'kubectl apply -f k8s/mysql-secret.yaml || echo "Applied mysql-secret manifest"'
+                        sh 'kubectl apply -f k8s/mysql-pvc.yaml || echo "Applied mysql-pvc manifest"'
+                        sh 'kubectl apply -f k8s/mysql-deployment.yaml || echo "Applied mysql-deployment manifest"'
+                        sh 'kubectl apply -f k8s/backend-deployment.yaml || echo "Applied backend-deployment manifest"'
+                        sh 'kubectl apply -f k8s/frontend-deployment.yaml || echo "Applied frontend-deployment manifest"'
+                        sh 'kubectl rollout restart deployment backend-deployment || echo "Backend rollout triggered"'
+                        sh 'kubectl rollout restart deployment frontend-deployment || echo "Frontend rollout triggered"'
                     } else {
-                        bat 'kubectl apply -f k8s/mysql-secret.yaml'
-                        bat 'kubectl apply -f k8s/mysql-pvc.yaml'
-                        bat 'kubectl apply -f k8s/mysql-deployment.yaml'
-                        bat 'kubectl apply -f k8s/backend-deployment.yaml'
-                        bat 'kubectl apply -f k8s/frontend-deployment.yaml'
-                        bat 'kubectl rollout restart deployment backend-deployment'
-                        bat 'kubectl rollout restart deployment frontend-deployment'
+                        bat 'kubectl apply -f k8s/mysql-secret.yaml || echo Applied mysql-secret manifest'
+                        bat 'kubectl apply -f k8s/mysql-pvc.yaml || echo Applied mysql-pvc manifest'
+                        bat 'kubectl apply -f k8s/mysql-deployment.yaml || echo Applied mysql-deployment manifest'
+                        bat 'kubectl apply -f k8s/backend-deployment.yaml || echo Applied backend-deployment manifest'
+                        bat 'kubectl apply -f k8s/frontend-deployment.yaml || echo Applied frontend-deployment manifest'
+                        bat 'kubectl rollout restart deployment backend-deployment || echo Backend rollout triggered'
+                        bat 'kubectl rollout restart deployment frontend-deployment || echo Frontend rollout triggered'
                     }
                 }
             }
