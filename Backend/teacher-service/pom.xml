@@ -42,7 +42,7 @@
         <version>0.12.6</version>
       </dependency>
 
-      <!-- 🧩 Add Spring Cloud dependency management for Eureka -->
+      <!-- Add Spring Cloud dependency management for Eureka -->
       <dependency>
         <groupId>org.springframework.cloud</groupId>
         <artifactId>spring-cloud-dependencies</artifactId>
@@ -163,7 +163,7 @@
       <version>0.0.1-SNAPSHOT</version>
     </dependency>-->
 
-    <!-- 🧩 Eureka Server -->
+    <!-- Eureka Server -->
    <!-- <dependency>
       <groupId>org.springframework.cloud</groupId>
       <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>

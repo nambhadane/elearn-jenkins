@@ -40,8 +40,7 @@ pipeline {
                 dir('Backend/teacher-service') {
                     script {
                         if (isUnix()) {
-                            sh 'chmod +x mvnw || true'
-                            sh './mvnw test -Dtest=*Test || mvn test || true'
+                            sh 'mvn test || true'
                         } else {
                             bat 'mvn test'
                         }
@@ -64,7 +63,7 @@ pipeline {
                 dir('Backend/teacher-service') {
                     script {
                         if (isUnix()) {
-                            sh './mvnw clean package -DskipTests || mvn clean package -DskipTests'
+                            sh 'mvn clean package -DskipTests'
                         } else {
                             bat 'mvn clean package -DskipTests'
                         }
