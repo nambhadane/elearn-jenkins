@@ -479,20 +479,148 @@ output "elearnhub_frontend_k8s_url" {
 
 ## 5. Part C: Execution Evidence & Screenshots Guide
 
-Follow this guide to take your project screenshots and paste them into your submission:
+This section contains the complete execution evidence for the project. For each step, follow the instructions below to capture the screenshot and insert it into the designated placeholder.
 
-| Screenshot # | Name / Objective | Command or Action | What to Capture |
-|---|---|---|---|
-| 📸 **Screenshot 1** | Jenkinsfile in VS Code | Open `E-LearnHub/Jenkinsfile` | Show the multi-stage declarative pipeline syntax in editor |
-| 📸 **Screenshot 2** | Jenkins Pipeline Job Configuration | In Jenkins UI ➔ Pipeline Job ➔ Configure | Show Pipeline script from SCM pointing to `https://github.com/nambhadane/ELearnHub.git` |
-| 📸 **Screenshot 3** | Jenkins Stage View (Green Success) | Jenkins Dashboard ➔ Project Stage View | Visual grid showing all 6 stages green (Checkout, Test, Build, Docker Build, Push, Deploy) |
-| 📸 **Screenshot 4** | Jenkins Console Output | Jenkins UI ➔ Build # ➔ Console Output | Bottom of console showing `SUCCESS: E-LearnHub CI/CD Pipeline Build completed` |
-| 📸 **Screenshot 5** | Docker Hub New Images | [hub.docker.com/u/namrata1805](https://hub.docker.com/u/namrata1805) | Repositories showing images with tags `:latest` and `:BUILD_NUMBER` |
-| 📸 **Screenshot 6** | Kubernetes Pods & Services | `kubectl get pods; kubectl get services` | Terminal table showing running pods and exposed NodePort services (30081, 30082) |
-| 📸 **Screenshot 7** | Live Application in Browser | Browser at `http://localhost:30081` | Running E-LearnHub web UI |
-| 📸 **Screenshot 8** | Terraform Code Structure | Open `E-LearnHub/terraform/` | Directory tree showing `provider.tf`, `variables.tf`, `main.tf`, `outputs.tf` |
-| 📸 **Screenshot 9** | `terraform init` Output | Run `terraform init` in terminal | Terminal showing "Terraform has been successfully initialized!" |
-| 📸 **Screenshot 10** | `terraform plan` Output | Run `terraform plan` in terminal | Terminal showing planned resource changes: `Plan: 7 to add, 0 to change, 0 to destroy` |
+---
+
+### Screenshot 1: Declarative Jenkinsfile Configuration
+- **Purpose:** Demonstrates the multi-stage declarative pipeline syntax stored in version control alongside the source code.
+- **How to capture:** Open `E-LearnHub/Jenkinsfile` in VS Code or your code editor.
+- **What must be visible:** The pipeline block showing the stages (`Checkout Source Code`, `Automated Tests`, `Build & Package`, `Build Docker Images`, `Push Images to Docker Hub`, and `Deploy to Kubernetes`).
+
+> **[INSERT SCREENSHOT 1 HERE]**  
+> *(Capture: VS Code editor displaying `Jenkinsfile`)*
+
+---
+
+### Screenshot 2: Jenkins Pipeline Job Configuration
+- **Purpose:** Proves that the Jenkins pipeline is linked directly to your GitHub repository using Pipeline script from SCM.
+- **How to capture:** In Jenkins Dashboard, navigate to your Pipeline job, click **Configure**, and scroll down to the **Pipeline** section.
+- **What must be visible:** 
+  - Definition: `Pipeline script from SCM`
+  - SCM: `Git`
+  - Repository URL: `https://github.com/nambhadane/elearn-jenkins.git`
+  - Branch Specifier: `*/main`
+  - Script Path: `Jenkinsfile`
+
+> **[INSERT SCREENSHOT 2 HERE]**  
+> *(Capture: Jenkins job configuration page showing GitHub repository URL)*
+
+---
+
+### Screenshot 3: Jenkins Pipeline Stage View (Successful Build)
+- **Purpose:** Verifies that all stages executed sequentially and passed successfully.
+- **How to capture:** Open the main page of your Jenkins Pipeline job.
+- **What must be visible:** The **Stage View** matrix showing all 6 stages highlighted in **green**:
+  - `Checkout Source Code`
+  - `Automated Tests`
+  - `Build & Package`
+  - `Build Docker Images`
+  - `Push Images to Docker Hub`
+  - `Deploy to Kubernetes`
+  - The build number (e.g., `#1` or `#2`) and overall execution duration.
+
+> **[INSERT SCREENSHOT 3 HERE]**  
+> *(Capture: Jenkins Stage View showing all stages green and successful)*
+
+---
+
+### Screenshot 4: Jenkins Console Output (Deployment & Post-Build Actions)
+- **Purpose:** Demonstrates the detailed build execution log and post-build success notification.
+- **How to capture:** In Jenkins UI, click on the successful build number (e.g., `#1`), then click **Console Output** and scroll to the bottom.
+- **What must be visible:**
+  - The execution of `kubectl apply` and `kubectl rollout restart`.
+  - The final post-action message: `SUCCESS: E-LearnHub CI/CD Pipeline Build completed and deployed successfully! 🚀`
+  - `Finished: SUCCESS` at the very end.
+
+> **[INSERT SCREENSHOT 4 HERE]**  
+> *(Capture: Jenkins Console Output showing end of build log and SUCCESS message)*
+
+---
+
+### Screenshot 5: Docker Hub Registry with Published Images
+- **Purpose:** Confirms that the CI/CD pipeline built and pushed the container images to the external container registry.
+- **How to capture:** Open your browser and go to `https://hub.docker.com/u/namrata1805`.
+- **What must be visible:** 
+  - Both repositories: `namrata1805/elearnhub-backend` and `namrata1805/elearnhub-frontend`.
+  - Inside each repository, the tags list showing `:latest` and the specific build tag `:<build-number>` recently pushed.
+
+> **[INSERT SCREENSHOT 5 HERE]**  
+> *(Capture: Docker Hub profile showing both E-LearnHub repositories and tags)*
+
+---
+
+### Screenshot 6: Kubernetes Pods and Services Running in Cluster
+- **Purpose:** Proves that the pipeline successfully triggered the deployment and all application pods and services are active in Kubernetes.
+- **How to capture:** Open your terminal or PowerShell and run:
+  ```powershell
+  kubectl get pods -o wide
+  kubectl get services
+  ```
+- **What must be visible:**
+  - Pods: `backend-deployment-xxx`, `frontend-deployment-xxx`, and `mysql-deployment-xxx` with Status `Running` (1/1 Ready).
+  - Services: `frontend-service` (NodePort `30081`), `backend-service` (NodePort `30082`), and `mysql-service` (ClusterIP `3306`).
+
+> **[INSERT SCREENSHOT 6 HERE]**  
+> *(Capture: Terminal output showing all Kubernetes pods Running and NodePort services)*
+
+---
+
+### Screenshot 7: Live Application Accessible via Browser
+- **Purpose:** Validates end-to-end functionality proving that users can access the deployed application through the Kubernetes NodePort.
+- **How to capture:** Open your web browser and navigate to `http://localhost:30081` (or your Minikube service URL).
+- **What must be visible:**
+  - The E-LearnHub user interface / dashboard loaded in the browser.
+  - The browser address bar showing port `30081`.
+
+> **[INSERT SCREENSHOT 7 HERE]**  
+> *(Capture: Web browser showing live E-LearnHub application on NodePort 30081)*
+
+---
+
+### Screenshot 8: Terraform Code Structure and Files
+- **Purpose:** Demonstrates the modular organization of Infrastructure as Code.
+- **How to capture:** Open VS Code showing the expanded `terraform/` directory in the file explorer.
+- **What must be visible:**
+  - `terraform/provider.tf`
+  - `terraform/variables.tf`
+  - `terraform/main.tf`
+  - `terraform/outputs.tf`
+  - `terraform/terraform.tfvars.example`
+
+> **[INSERT SCREENSHOT 8 HERE]**  
+> *(Capture: VS Code explorer displaying the terraform directory structure)*
+
+---
+
+### Screenshot 9: Terraform Initialization (`terraform init`)
+- **Purpose:** Demonstrates Terraform downloading and configuring the required AWS cloud provider plugins.
+- **How to capture:** In PowerShell or terminal, navigate to the terraform directory and run:
+  ```powershell
+  cd D:\ELearnHub\E-LearnHub\terraform
+  terraform init
+  ```
+- **What must be visible:**
+  - Provider initialization lines for `hashicorp/aws`.
+  - The green confirmation message: `"Terraform has been successfully initialized!"`
+
+> **[INSERT SCREENSHOT 9 HERE]**  
+> *(Capture: Terminal showing successful terraform init output)*
+
+---
+
+### Screenshot 10: Terraform Execution Plan (`terraform plan`)
+- **Purpose:** Demonstrates Terraform’s declarative planning phase showing the exact cloud resources that will be provisioned.
+- **How to capture:** In the terraform directory, run:
+  ```powershell
+  terraform plan
+  ```
+- **What must be visible:**
+  - The list of resources to be created (`aws_vpc`, `aws_subnet`, `aws_internet_gateway`, `aws_route_table`, `aws_security_group`, and `aws_instance`).
+  - The summary line at the bottom: `"Plan: 7 to add, 0 to change, 0 to destroy."`
+
+> **[INSERT SCREENSHOT 10 HERE]**  
+> *(Capture: Terminal showing terraform plan execution and resource summary)*
 
 ---
 
